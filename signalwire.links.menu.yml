@@ -1,0 +1,12 @@
+signalwire.admin_config:
+  title: Signalwire
+  route_name: signalwire.admin_config
+  weight: 9
+  parent: system.admin_config
+
+signal.config_form:
+  title: 'Signalwire configuration'
+  route_name: 'signalwire.config_form'
+  description: 'Signalwire configuration'
+  parent: signalwire.admin_config
+  weight: 99

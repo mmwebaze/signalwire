@@ -1,0 +1,17 @@
+signalwire.admin_config:
+  path: '/admin/config/signalwire'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Signalwire Configuration'
+  requirements:
+    _permission: 'access administration pages'
+
+signalwire.config_form:
+  path: '/admin/config/signalwire/configuration'
+  defaults:
+    _form: '\Drupal\signalwire\Form\SignalwireConfigForm'
+    _title: 'Signal Settings'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
