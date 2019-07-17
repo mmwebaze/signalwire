@@ -67,7 +67,7 @@ class SignalwireConfigForm extends ConfigFormBase {
 
         $form['signalwire']['client'] = array(
             '#type' => 'radios',
-            '#title' => $this->t('Signalwire clients'),
+            '#title' => $this->t('Signalwire Gateways'),
             '#options' => $clientOptions,
             '#default_value' => isset($client) ? $client : 'none',
             '#required' => TRUE,
@@ -114,7 +114,9 @@ class SignalwireConfigForm extends ConfigFormBase {
             $plugin_manager = \Drupal::service('plugin.manager.signalwire_manager');
 
             $instance = $plugin_manager->createInstance($client);
-            $instance->sendMessage('This is send by plugin', $form_state->getValue('to'));
+            $testMsg = $instance->sendMessage('This is send by plugin', $form_state->getValue('from'), $form_state->getValue('to'));
+
+            \Drupal::logger('signalwire')->notice($testMsg);
         }
         else{
             \Drupal::logger('signalwire')->notice('No client has been selected..');

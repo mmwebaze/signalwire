@@ -9,7 +9,7 @@ use Drupal\Component\Plugin\PluginInspectionInterface;
 
 interface SignalwireServiceInterface extends PluginInspectionInterface {
     /**
-     * Gets a list of account associated phone numbers purchased through Signalwire.
+     * Retrieves a list of account associated phone numbers purchased through Signalwire.
      *
      * @return IncomingPhoneNumberList
      *   The incoming phone number list.
@@ -22,11 +22,20 @@ interface SignalwireServiceInterface extends PluginInspectionInterface {
      * @param string $message
      *   The message body.
      *
+     * @param string $fromNumber
+     *   The senders number.
+     *
      * @param string $recipientNumber
      *   The recipient number.
      *
      * @return MessageList
      *  The message list.
      */
-    public function sendMessage(string $message, string $recipientNumber);
+    public function sendMessage(string $message, string $fromNumber, string $recipientNumber);
+
+    /**
+     * Retrieves a list of
+     * @return mixed
+     */
+    public function numberGroups();
 }

@@ -24,18 +24,4 @@ class Signalwire extends Plugin{
      * @var string
      */
     protected $label;
-
-    /**
-     * The http client type (curl or twilio clients supported).
-     *
-     * @var string
-     */
-    protected $httpClient;
-
-    /**
-     * Whether environment variables are being used.
-     *
-     * @var bool (optional)
-     */
-    protected $usesEnvVariables = FALSE;
 }
