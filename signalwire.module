@@ -1,5 +1,7 @@
 <?php
 use Drupal\Core\Routing\RouteMatchInterface;
+use \Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Entity\EntityInterface;
 
 /**
  * Implements hook_help().
@@ -14,5 +16,90 @@ function signalwire_help($route_name, RouteMatchInterface $route_match) {
             return $output;
 
         default:
+    }
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Adding signalwire messaging settings to managed fields form of a fieldable entity.
+ */
+function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+    /** @var  \Drupal\Core\Config\ConfigFactoryInterface $config */
+    $config = Drupal::service('config.factory');
+    $signalwire_config = $config->get('signalwire.config');
+    $signalwire_nodes = array_keys($signalwire_config->get('messaging.entities.node'));
+
+    $messaging_forms = array();
+
+    foreach ($signalwire_nodes as $signalwire_node){
+        array_push($messaging_forms, 'node_'.$signalwire_node.'_form');
+    }
+
+    if ($form_id == 'entity_view_display_edit_form'){
+
+        $signalwire_nodes = $signalwire_config->get('messaging.entities');
+
+        /** @var \Drupal\field_ui\Form\EntityViewDisplayEditForm $form_object */
+        $form_object = $form_state->getFormObject();
+
+        /** @var  \Drupal\Core\Entity\Entity\EntityViewDisplay $entity */
+        $entity = $form_object->getEntity();
+
+        $target_type = $entity->getTargetEntityTypeId();
+
+        $target_bundle = $entity->getTargetBundle();
+
+        $field_definitions = \Drupal::service('entity_field.manager')->getFieldDefinitions($target_type, $target_bundle);
+        $fields = $form['#fields'];
+
+        $form['enabled_messaging_fields'] = array(
+            '#type' => 'details',
+            '#open' => FALSE,
+            '#title' => t('Messaging settings'),
+            '#description' => t('Selected fields will make up the text message body.'),
+            '#tree' => TRUE,
+        );
+
+        foreach ($fields as $field){
+            $form['enabled_messaging_fields'][$target_type.'#'.$target_bundle.'#'.$field] = array(
+                '#type' => 'checkbox',
+                '#title' => $field_definitions[$field]->getLabel(),
+                '#default_value' => $signalwire_nodes[$target_type][$target_bundle][$field],
+            );
+        }
+
+        $form['actions']['submit']['#submit'][] = 'Drupal\signalwire\Service\SignalwireHandler::signalwireManagedFields';
+    }
+    else if(in_array($form_id, $messaging_forms)) {
+
+        $form['message_on_node_creation'] = array(
+            '#type' => 'checkbox',
+            '#title' => t('This node is configured to support text messaging'),
+            '#weight' => -1,
+            '#default_value' => '1',
+        );
+
+        $form['#entity_builders'][] = 'signalwire_node_builder';
+    }
+
+}
+
+/**
+ * Entity form builder to add the message_on_node_creation information to the node.
+ *
+ * @todo: Remove this in favor of an entity field.
+ */
+function signalwire_node_builder($entity_type, \Drupal\node\NodeInterface $entity, &$form, FormStateInterface $form_state) {
+    $entity->message_on_node_creation = $form_state->getValue('message_on_node_creation');
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function signalwire_entity_insert(EntityInterface $entity) {
+    if (isset($entity->message_on_node_creation) && $entity->message_on_node_creation == 1){
+
     }
 }
