@@ -2,3 +2,6 @@ services:
   plugin.manager.signalwire_manager:
     class: Drupal\signalwire\Plugin\Signalwire\SignalwireManager
     parent: default_plugin_manager
+  signalwire_messaging.manager:
+    class: Drupal\signalwire\Service\SignalwireMessageManager
+    arguments: ['@database']

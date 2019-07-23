@@ -3,9 +3,7 @@ namespace Drupal\signalwire\Form;
 
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
-use SignalWire\Rest\Client;
 use Drupal\Core\Ajax\AjaxResponse;
-use Twilio\Exceptions\TwilioException;
 
 class SignalwireConfigForm extends ConfigFormBase {
 
@@ -72,22 +70,21 @@ class SignalwireConfigForm extends ConfigFormBase {
             '#default_value' => isset($client) ? $client : 'none',
             '#required' => TRUE,
         );
+        $form['signalwire']['from'] = array(
+            '#type' => 'textfield',
+            '#title' => $this->t('Sender\'s number'),
+            '#default_value' => $config->get('sender'),
+            '#required' => TRUE,
+        );
 
         $form['signalwire_test'] = array(
             '#type' => 'fieldset',
             '#title' => $this->t('Test connection'),
         );
-        $form['signalwire_test']['from'] = array(
-            '#type' => 'textfield',
-            '#title' => $this->t('From'),
-            //'#default_value' => $config->get('api_key'),
-            '#required' => TRUE,
-        );
+
         $form['signalwire_test']['to'] = array(
             '#type' => 'textfield',
             '#title' => $this->t('To'),
-            //'#default_value' => $config->get('api_key'),
-            '#required' => TRUE,
         );
 
         $form['signalwire_test']['test'] = array(
@@ -105,6 +102,14 @@ class SignalwireConfigForm extends ConfigFormBase {
         );
         return parent::buildForm($form, $form_state);
     }
+
+    /**
+     * Sends a test sms message.
+     *
+     * @param array $form
+     * @param FormStateInterface $form_state
+     * @return AjaxResponse
+     */
     public function runTest(array &$form, FormStateInterface $form_state) {
 
         $ajaxResponse = new AjaxResponse();
@@ -122,7 +127,6 @@ class SignalwireConfigForm extends ConfigFormBase {
             \Drupal::logger('signalwire')->notice('No client has been selected..');
         }
 
-
         return $ajaxResponse;
     }
     /**
@@ -135,6 +139,7 @@ class SignalwireConfigForm extends ConfigFormBase {
             ->set('api_key', $form_state->getValue('api_key'))
             ->set('project_key', $form_state->getValue('project_key'))
             ->set('client', $form_state->getValue('client'))
+            ->set('sender', $form_state->getValue('from'))
             ->save();
     }
 }

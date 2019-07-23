@@ -9,8 +9,7 @@ class SignalwireHandler {
     public static function signalwireManagedFields(&$form, FormStateInterface $form_state){
 
         $signalwireFields = $form_state->getValue('enabled_messaging_fields');
-        //print_r(count($signalwireFields));
-        $noFields = count($signalwireFields);
+        $numberFields = count($signalwireFields);
 
         /** @var  \Drupal\Core\Config\ConfigFactoryInterface $config */
         $config = \Drupal::service('config.factory');
@@ -27,11 +26,10 @@ class SignalwireHandler {
                 $parameters = explode('#', $key);
                 $signalwireConfig->clear('messaging.entities.'.$parameters[0].'.'.$parameters[1].'.'.$parameters[2]);
             }
-            if ($noFields == $noDisabledFields){
+            if ($numberFields == $noDisabledFields){
                 $signalwireConfig->clear('messaging.entities.'.$parameters[0].'.'.$parameters[1]);
             }
         }
-        //print_r($noDisabledFields.' **');die;
         $signalwireConfig->save();
     }
 }

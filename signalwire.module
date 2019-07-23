@@ -2,6 +2,7 @@
 use Drupal\Core\Routing\RouteMatchInterface;
 use \Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\signalwire\Util\SignalwireUtil;
 
 /**
  * Implements hook_help().
@@ -29,7 +30,13 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
     /** @var  \Drupal\Core\Config\ConfigFactoryInterface $config */
     $config = Drupal::service('config.factory');
     $signalwire_config = $config->get('signalwire.config');
-    $signalwire_nodes = array_keys($signalwire_config->get('messaging.entities.node'));
+    $signalwire_nodes = $signalwire_config->get('messaging.entities.node');
+    if (!is_null($signalwire_nodes)){
+        $signalwire_nodes = array_keys($signalwire_config->get('messaging.entities.node'));
+    }
+    else{
+        $signalwire_nodes = array();
+    }
 
     $messaging_forms = array();
 
@@ -63,6 +70,7 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
         );
 
         foreach ($fields as $field){
+            //print_r($field_definitions[$field]->getType().' - '.$field);
             $form['enabled_messaging_fields'][$target_type.'#'.$target_bundle.'#'.$field] = array(
                 '#type' => 'checkbox',
                 '#title' => $field_definitions[$field]->getLabel(),
@@ -73,17 +81,55 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
         $form['actions']['submit']['#submit'][] = 'Drupal\signalwire\Service\SignalwireHandler::signalwireManagedFields';
     }
     else if(in_array($form_id, $messaging_forms)) {
+        $form['recipient_details'] = array(
+            '#type' => 'details',
+            '#open' => TRUE,
+            '#title' => t('Recipient details'),
+            //'#description' => t('Set.'),
+            '#tree' => TRUE,
+        );
 
-        $form['message_on_node_creation'] = array(
+        $form['recipient_details']['message_on_node_creation'] = array(
             '#type' => 'checkbox',
             '#title' => t('This node is configured to support text messaging'),
             '#weight' => -1,
             '#default_value' => '1',
         );
+        $form['recipient_details']['recipients'] = array(
+            '#title' => t('Recipient(s)'),
+            '#type' => 'textarea',
+            '#description' => t('List of recipients telephone numbers or number groups separated by comma.'),
+            '#resizable' => TRUE,
+            '#weight' => -1,
+            '#required' => TRUE,
+        );
+        $form['recipient_details']['recipient_type'] = array(
+            '#type' => 'radios',
+            '#title' => t('Recipient types'),
+            '#options' => array(
+                'telephone_numbers' => t('Telephone number(s)'),
+                'number_groups' => t('Number Group(s)'),
+            ),
+            '#weight' => -1,
+            '#default_value' => 'telephone_numbers',
+            '#required' => TRUE,
+        );
+        $form['recipient_details']['message_frequency'] = array(
+            '#type' => 'radios',
+            '#title' => t('Message Frequency'),
+            '#options' => array(
+                'once' => t('Once on content create'),
+                'daily' => t('Daily'),
+                'weekly' => t('Weekly'),
+                'monthly' => t('Monthly'),
+            ),
+            '#weight' => -1,
+            '#default_value' => 'once',
+            '#required' => TRUE,
+        );
 
         $form['#entity_builders'][] = 'signalwire_node_builder';
     }
-
 }
 
 /**
@@ -92,14 +138,105 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
  * @todo: Remove this in favor of an entity field.
  */
 function signalwire_node_builder($entity_type, \Drupal\node\NodeInterface $entity, &$form, FormStateInterface $form_state) {
-    $entity->message_on_node_creation = $form_state->getValue('message_on_node_creation');
+    /*$entity->message_on_node_creation = $form_state->getValue('message_on_node_creation');*/
+    $entity->recipient_details = $form_state->getValue('recipient_details');
 }
 
 /**
  * Implements hook_entity_insert().
  */
 function signalwire_entity_insert(EntityInterface $entity) {
-    if (isset($entity->message_on_node_creation) && $entity->message_on_node_creation == 1){
 
+    $config = Drupal::service('config.factory');
+    $signalwire_config = $config->get('signalwire.config');
+    $gateway = $signalwire_config->get('client');
+
+    if ($gateway != 'none'){
+
+        $bundles = array_keys($signalwire_config->get('messaging.entities.node'));
+
+        if (in_array($entity->bundle(), $bundles)){
+            $fields = array_keys($signalwire_config->get('messaging.entities.node.'.$entity->bundle()));
+
+            $message = null;
+
+            //Create the message based on configured fields
+            foreach ($fields as $field){
+                $items = $entity->get($field)->getValue();
+
+                foreach ($items as $item){
+                    foreach ($item as $key => $value){
+                        switch ($key){
+                            case 'value':
+                                $value = trim(strip_tags($value));
+                                $message = $message.$value.'. ';
+                                break;
+                            case 'target_id':
+                                /** @todo implement entity reference values. **/
+                                break;
+                        }
+                    }
+                }
+            }
+
+            //send message out once on entity creation.
+            $frequency = 0;
+
+            switch ($entity->recipient_details['message_frequency']){
+                case 'daily':
+                    $frequency = 1;
+                    break;
+                case 'weekly':
+                    $frequency = 2;
+                    break;
+                case 'monthly':
+                    $frequency = 3;
+                    break;
+            }
+
+            $value = array(
+                'node' => $entity->id(),
+                'message' => $message,
+                'from' => $signalwire_config->get('sender'),
+                'recipients' => serialize(array(
+                    'type' => $entity->recipient_details['recipient_type'],
+                    'numbers' => explode(',', $entity->recipient_details['recipients'])
+                )),
+                'frequency' => $frequency,
+                'date_sent' => $entity->get('created')->value,
+                'date_next_send' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency'])
+            );
+            $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');
+            $signalwire_plugin_manager = Drupal::service('plugin.manager.signalwire_manager');
+            $instance = $signalwire_plugin_manager->createInstance($gateway);
+
+            if ($entity->recipient_details['recipient_type'] == 'telephone_numbers'){
+                $queue = \Drupal::queue('signalwire_message_queue');
+                $queue->createQueue();
+
+                $numbers = explode(',', $entity->recipient_details['recipients']);
+                foreach ($numbers as $number){
+                    //queue
+                    //$testMsg = $instance->sendMessage($message, $signalwire_config->get('sender'), $number);
+                    $data = array(
+                        'message' => $message,
+                        'from' => $signalwire_config->get('sender'),
+                        'to' => $number
+                    );
+
+                    $queue->createItem($data);
+                }
+            }
+            elseif ($entity->recipient_details['recipient_type'] == 'number_groups'){
+                //get numbers belonging to number group
+            }
+            //do not save message if frequency is equal to zero or set to once.
+            if ($frequency != 0){
+                $signalwire_messaging_manager->saveMessage($value);
+            }
+        }
     }
+}
+function processRecipients($recipients) {
+
 }

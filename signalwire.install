@@ -1,0 +1,57 @@
+<?php
+/**
+ * Implements hook_schema().
+ */
+function signalwire_schema() {
+    $schema['signalware_messages'] = array(
+        'description' => 'Stores sent out messages.',
+        'fields' => array(
+            'node' => array(
+                'type' => 'int',
+                'not null' => TRUE,
+                'description' => 'Unique node ID.',
+            ),
+            'message' => array(
+                'type' => 'text',
+                //'length' => 255,
+                'not null' => TRUE,
+                //'default' => '',
+                'description' => "Message body being sent.",
+            ),
+            'from' => array(
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                //'default' => '',
+                'description' => "The sender number.",
+            ),
+            'recipients' => array(
+                'type' => 'blob',
+                //'length' => 255,
+                'not null' => FALSE,
+                'size' => 'big',
+                'description' => "A collection of recipients.",
+            ),
+            'frequency' => array(
+                'type' => 'int',
+                'not null' => TRUE,
+                'description' => "The frequency the message is sent i.e. 0 - daily, 1 - weekly and 2 - monthly.",
+            ),
+            'date_sent' => array(
+                'type' => 'int',
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Unix timestamp message is sent."
+            ),
+            'date_next_send' => array(
+                'type' => 'int',
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Unix timestamp when next message will be sent."
+            )
+        ),
+        'primary key' => array('node'),
+    );
+
+    return $schema;
+}
