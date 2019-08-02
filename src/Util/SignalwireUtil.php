@@ -40,4 +40,8 @@ class SignalwireUtil {
 
         return $nextSendTimeStamp;
     }
+    public static function processNumberGroups(){
+
+    }
+    //thoughtbot
 }

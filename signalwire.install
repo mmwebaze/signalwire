@@ -18,6 +18,7 @@ function signalwire_schema() {
                 //'default' => '',
                 'description' => "Message body being sent.",
             ),
+            //remove from column as this can be got from the config
             'from' => array(
                 'type' => 'varchar',
                 'length' => 255,
@@ -35,7 +36,7 @@ function signalwire_schema() {
             'frequency' => array(
                 'type' => 'int',
                 'not null' => TRUE,
-                'description' => "The frequency the message is sent i.e. 0 - daily, 1 - weekly and 2 - monthly.",
+                'description' => "The frequency the message is sent out i.e. 0 - daily, 1 - weekly and 2 - monthly.",
             ),
             'date_sent' => array(
                 'type' => 'int',
@@ -48,7 +49,13 @@ function signalwire_schema() {
                 'not null' => TRUE,
                 'default' => 0,
                 'description' => "Unix timestamp when next message will be sent."
-            )
+            ),
+            'date_stop' => array(
+                'type' => 'int',
+                'not null' => TRUE,
+                'default' => 0,
+                'description' => "Unix timestamp when sending message will be stopped."
+            ),
         ),
         'primary key' => array('node'),
     );

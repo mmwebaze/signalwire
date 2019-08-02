@@ -70,10 +70,43 @@ class SignalwireConfigForm extends ConfigFormBase {
             '#default_value' => isset($client) ? $client : 'none',
             '#required' => TRUE,
         );
-        $form['signalwire']['from'] = array(
+        $form['signalwire_sender'] = array(
+            '#type' => 'fieldset',
+            '#title' => $this->t('Sender Settings'),
+        );
+
+        $senderType = $config->get('sender_type');
+
+        $form['signalwire_sender']['sender_type'] = array(
+            '#type' => 'radios',
+            /*'#prefix' => '<div class="signalwire_sender_type">',
+            '#suffix' => '</div>',*/
+            '#title' => $this->t('Sender settings'),
+            '#options' => array(
+                //'none' => $this->t('Turn off'),
+                'telephone' => $this->t('Use a specific number'),
+                'number_group' => $this->t('Use a specific number group')
+            ),
+            '#default_value' => isset($senderType) ? $senderType : 'telephone',
+            '#required' => TRUE,
+            /*'#ajax' => array(
+                'callback' => '::sender',
+                'progress' => array(
+                    'type' => 'throbber',
+                    'message' => 'processing...',
+                ),
+            ),*/
+        );
+        $senderType = ($senderType == 'none'? 'hide_from_number': 'unhide_from_number');
+        $form['signalwire_sender']['from'] = array(
+            '#prefix' => '<div id="signalwire_from" class="'.$senderType.'">',
+            '#suffix' => '</div>',
             '#type' => 'textfield',
-            '#title' => $this->t('Sender\'s number'),
+            '#title' => $this->t('Sender'),
             '#default_value' => $config->get('sender'),
+            /*'#attributes' => array(
+                'class' => array($senderType == 'none'? 'hide_from_number': 'unhide_from_number')
+            ),*/
             '#required' => TRUE,
         );
 
@@ -92,6 +125,7 @@ class SignalwireConfigForm extends ConfigFormBase {
             '#value' => t('Test call'),
             '#description' => $this->t('Run test'),
             '#ajax' => array(
+                'wrapper' => 'edit-from',
                 'callback' => '::runTest',
                 'event' => 'click',
                 'progress' => array(
@@ -100,6 +134,8 @@ class SignalwireConfigForm extends ConfigFormBase {
                 ),
             )
         );
+        /*$form['#attached']['library'][] = 'signalwire/signalwire.settings';
+        $form['#attached']['drupalSettings']['signalwire']['setting']['sender_type'] = $senderType;*/
         return parent::buildForm($form, $form_state);
     }
 
@@ -119,12 +155,12 @@ class SignalwireConfigForm extends ConfigFormBase {
             $plugin_manager = \Drupal::service('plugin.manager.signalwire_manager');
 
             $instance = $plugin_manager->createInstance($client);
-            $testMsg = $instance->sendMessage('This is send by plugin', $form_state->getValue('from'), $form_state->getValue('to'));
+            $testMsg = $instance->sendMessage('Drupal signalwire test message.', $form_state->getValue('from'), $form_state->getValue('to'), $form_state->getValue('sender_type'));
 
             \Drupal::logger('signalwire')->notice($testMsg);
         }
         else{
-            \Drupal::logger('signalwire')->notice('No client has been selected..');
+            \Drupal::logger('signalwire')->notice('No gateway or sender has been selected..');
         }
 
         return $ajaxResponse;
@@ -134,12 +170,26 @@ class SignalwireConfigForm extends ConfigFormBase {
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
 
+        $sender = $form_state->getValue('from');
+        /*if ($form_state->getValue('sender_type') == 'none'){
+            $sender = NULL;
+        }*/
+
         $this->config('signalwire.config')
             ->set('space_url', $form_state->getValue('space_url'))
             ->set('api_key', $form_state->getValue('api_key'))
             ->set('project_key', $form_state->getValue('project_key'))
             ->set('client', $form_state->getValue('client'))
-            ->set('sender', $form_state->getValue('from'))
+            ->set('sender_type', $form_state->getValue('sender_type'))
+            ->set('sender',$sender)
             ->save();
     }
+    /*public function sender(array $form, FormStateInterface $form_state) {
+        //$ajaxResponse = new AjaxResponse();
+        $form['signalwire_sender']['from']['#required'] = FALSE;
+        \Drupal::logger('signalwire')->notice(json_encode('CHange to FALSE', 1));
+        //return $ajaxResponse;
+
+        return $form['signalwire_sender']['from'];
+    }*/
 }

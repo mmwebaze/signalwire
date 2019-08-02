@@ -4,8 +4,6 @@ namespace Drupal\signalwire\Plugin\Signalwire\Client;
 
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\signalwire\Plugin\Signalwire\SignalwirePluginBase;
-use Twilio\Rest\Api\V2010\Account\IncomingPhoneNumberList;
-use Twilio\Rest\Api\V2010\Account\MessageList;
 use SignalWire\Rest\Client;
 use Twilio\Exceptions\TwilioException;
 use GuzzleHttp\Client as HttpClient;
@@ -21,11 +19,31 @@ use GuzzleHttp\Client as HttpClient;
 class DefaultSignalwireGateway extends SignalwirePluginBase {
 
     /**
+     * A signalwire client.
+     *
      * @var \SignalWire\Rest\Client
      */
     private $client;
+
+    /**
+     * Signalwire space url.
+     *
+     * @var string
+     */
     private $spaceUrl;
+
+    /**
+     * Signalwire project key.
+     *
+     * @var string
+     */
     private $projectKey;
+
+    /**
+     * Signalwire api key.
+     *
+     * @var string
+     */
     private $apiKey;
 
     public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactory $configFactory, HttpClient $httpClient)
@@ -61,12 +79,21 @@ class DefaultSignalwireGateway extends SignalwirePluginBase {
     /**
      * {@inheritdoc}
      */
-    public function sendMessage(string $message, string $fromNumber, string $recipientNumber) {
+    public function sendMessage(string $message, string $fromNumber, string $recipientNumber, string $senderType = 'telephone') {
         try{
-            $messageList = $this->client->messages
-                ->create($recipientNumber,
-                    array("from" => $fromNumber, "body" => $message)
-                );
+            $messages = $this->client->messages;
+            if ($senderType == 'number_group'){
+                $messageList = $messages
+                    ->create($recipientNumber,
+                        array("MessagingServiceSid" => $fromNumber, "body" => $message)
+                    );
+            }
+            else{
+                $messageList = $messages
+                    ->create($recipientNumber,
+                        array("from" => $fromNumber, "body" => $message)
+                    );
+            }
 
             return $messageList;
         }
@@ -99,8 +126,58 @@ class DefaultSignalwireGateway extends SignalwirePluginBase {
                 'status' => $e->getMessage(),
                 'data' => NULL
             );
-
         }
+    }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function numberGroupMemberships(string $numberGroupId){
+        $endpoint = 'https://'.$this->spaceUrl.'/api/relay/rest/number_groups/'.$numberGroupId.'/number_group_memberships';
+
+        try{
+            $request = $this->httpClient->get($endpoint, [
+                'auth' => [$this->projectKey, $this->apiKey]
+            ]);
+            $response = $request->getBody();
+
+
+            return array('status' => $request->getStatusCode(),
+                'data' => json_decode($response)->data
+            );
+        }
+        catch (\Exception $e) {
+
+            return array(
+                'status' => $e->getMessage(),
+                'data' => NULL
+            );
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function phoneNumbers(){
+        $endpoint = 'https://'.$this->spaceUrl.'/api/relay/rest/phone_numbers';
+
+        try{
+            $request = $this->httpClient->get($endpoint, [
+                'auth' => [$this->projectKey, $this->apiKey]
+            ]);
+            $response = $request->getBody();
+
+
+            return array('status' => $request->getStatusCode(),
+                'data' => json_decode($response)->data
+            );
+        }
+        catch (\Exception $e) {
+
+            return array(
+                'status' => $e->getMessage(),
+                'data' => NULL
+            );
+        }
     }
 }

@@ -1,0 +1,7 @@
+.hide_from_number {
+    display: none;
+}
+
+.unhide_from_number {
+    display: block;
+}

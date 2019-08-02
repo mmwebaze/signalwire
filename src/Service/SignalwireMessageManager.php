@@ -3,6 +3,8 @@
 namespace Drupal\signalwire\Service;
 
 use Drupal\Core\Database\Driver\mysql\Connection;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\Messenger\MessengerInterface;
 
 class SignalwireMessageManager implements SignalwireMessageInterface {
 
@@ -14,14 +16,40 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
     protected $connection;
 
     /**
+     * The logger channel factory.
+     *
+     * @var \Drupal\Core\Logger\LoggerChannelFactoryInterface
+     */
+    protected $loggerChannelFactory;
+
+    /**
+     * The messenger service.
+     *
+     * @var \Drupal\Core\Messenger\MessengerInterface
+     */
+    protected $messenger;
+
+    /**
      * SignalwireMessageManager constructor.
      *
-     * @param \Drupal\Core\Database\Driver\mysql\Connection $connection
+     * @param Connection $connection
      *   The connection service.
+     *
+     * @param LoggerChannelFactoryInterface $loggerChannelFactory
+     *   The logger channel factory.
+     *
+     * @param MessengerInterface $messenger
+     *   A messenger service.
      */
-    public function __construct(Connection $connection) {
+    public function __construct(Connection $connection, LoggerChannelFactoryInterface $loggerChannelFactory, MessengerInterface $messenger) {
         $this->connection = $connection;
+        $this->loggerChannelFactory = $loggerChannelFactory->get('signalwire');
+        $this->messenger = $messenger;
     }
+
+    /**
+     * {@inheritdoc}
+     */
     public function saveMessage(array $values) {
 
         try{
@@ -38,14 +66,34 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
                 $this->connection->insert('signalware_messages')->fields(['node', 'message', 'from', 'recipients', 'frequency', 'date_sent', 'date_next_send'])
                     ->values($value)->execute();
             }
-
+            $this->messenger->addMessage('The message has been saved.');
         }
         catch (\Exception $e) {
-            //@todo replace by logging and redirect to error page
-            print_r($e->getMessage());
+            //log for admin and debug purposes.
+            $this->loggerChannelFactory->notice($e->getMessage());
+            //Notify user something has gone seriously wrong with saving the message.
+            $this->messenger->addMessage('Saving message failed. ', MessengerInterface::TYPE_ERROR);
         }
     }
-    public function getMessage() {
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getMessage($messageId) {
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function setNextSend(int $messageId, int $date){
+
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function removeMessage(int $messageId){
 
     }
 }

@@ -12,7 +12,18 @@ use Drupal\Core\Config\ConfigFactory;
  */
 class NumberGroupsForm extends FormBase {
 
+    /**
+     * The signalwire configured gateway.
+     *
+     * @var string
+     */
     protected $gateway;
+
+    /**
+     * Default signalwire plugin.
+     *
+     * @var
+     */
     protected $signalwirePluginManager;
 
     public function __construct(ConfigFactory $configFactory, $signalwirePluginManager) {
@@ -35,27 +46,44 @@ class NumberGroupsForm extends FormBase {
 
         $instance = $this->signalwirePluginManager->createInstance($this->gateway);
         $numberGroups = $instance->numberGroups();
+        $numberGroupMemberships = $instance->numberGroupMemberships('782f5bf8-e424-477d-89e1-a975690fdeff');
+        $phoneNumbers = $instance->phoneNumbers();
+        print_r($phoneNumbers);die;
 
-        $header = array(
+       /* $header = array(
             'name' => $this->t('Name'),
             'phone_number_count' => $this->t('Phone Number Count')
-        );
+        );*/
 
-        $rows = array();
-
+        //$rows = array();
+        $groups = array();
         foreach ($numberGroups['data'] as  $numberGroup) {
-            $rows[$numberGroup->id] = array(
+            $groups[$numberGroup->id] = $numberGroup->name.' ('.$numberGroup->phone_number_count.')';
+            /*$rows[$numberGroup->id] = array(
                 'name' => $numberGroup->name,
                 'phone_number_count' => $numberGroup->phone_number_count
-            );
+            );*/
         }
-
-        $form['table'] = array(
+        /*$form['table'] = array(
             '#theme' => 'table',
             '#header' => $header,
             '#rows' => $rows,
             '#empty' => t('No number groups found'),
+        );*/
+        $form['number_groups'] = array(
+            '#type' => 'checkboxes',
+            '#title' => $this->t('Number groups to import'),
+            '#options' => $groups,
+            '#required' => TRUE,
         );
+
+        $form['actions']['#type'] = 'actions';
+        $form['actions']['submit'] = array(
+            '#type' => 'submit',
+            '#button_type' => 'primary',
+            '#value' => $this->t('Import Number Groups'),
+        );
+
 
         return $form;
     }
@@ -64,7 +92,7 @@ class NumberGroupsForm extends FormBase {
      * {@inheritdoc}
      */
     public function submitForm(array &$form, FormStateInterface $form_state) {
-
+        print_r($form_state->getValue('number_groups'));die;
     }
 
     /**

@@ -70,7 +70,6 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
         );
 
         foreach ($fields as $field){
-            //print_r($field_definitions[$field]->getType().' - '.$field);
             $form['enabled_messaging_fields'][$target_type.'#'.$target_bundle.'#'.$field] = array(
                 '#type' => 'checkbox',
                 '#title' => $field_definitions[$field]->getLabel(),
@@ -98,12 +97,12 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
         $form['recipient_details']['recipients'] = array(
             '#title' => t('Recipient(s)'),
             '#type' => 'textarea',
-            '#description' => t('List of recipients telephone numbers or number groups separated by comma.'),
+            '#description' => t('List of recipient telephone numbers separated by comma.'),
             '#resizable' => TRUE,
             '#weight' => -1,
             '#required' => TRUE,
         );
-        $form['recipient_details']['recipient_type'] = array(
+        /*$form['recipient_details']['recipient_type'] = array(
             '#type' => 'radios',
             '#title' => t('Recipient types'),
             '#options' => array(
@@ -113,7 +112,7 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
             '#weight' => -1,
             '#default_value' => 'telephone_numbers',
             '#required' => TRUE,
-        );
+        );*/
         $form['recipient_details']['message_frequency'] = array(
             '#type' => 'radios',
             '#title' => t('Message Frequency'),
@@ -150,6 +149,7 @@ function signalwire_entity_insert(EntityInterface $entity) {
     $config = Drupal::service('config.factory');
     $signalwire_config = $config->get('signalwire.config');
     $gateway = $signalwire_config->get('client');
+    $sender_type = $signalwire_config->get('sender_type');
 
     if ($gateway != 'none'){
 
@@ -194,49 +194,43 @@ function signalwire_entity_insert(EntityInterface $entity) {
                     break;
             }
 
-            $value = array(
-                'node' => $entity->id(),
-                'message' => $message,
-                'from' => $signalwire_config->get('sender'),
-                'recipients' => serialize(array(
-                    'type' => $entity->recipient_details['recipient_type'],
-                    'numbers' => explode(',', $entity->recipient_details['recipients'])
-                )),
-                'frequency' => $frequency,
-                'date_sent' => $entity->get('created')->value,
-                'date_next_send' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency'])
-            );
-            $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');
-            $signalwire_plugin_manager = Drupal::service('plugin.manager.signalwire_manager');
-            $instance = $signalwire_plugin_manager->createInstance($gateway);
 
-            if ($entity->recipient_details['recipient_type'] == 'telephone_numbers'){
-                $queue = \Drupal::queue('signalwire_message_queue');
-                $queue->createQueue();
 
-                $numbers = explode(',', $entity->recipient_details['recipients']);
-                foreach ($numbers as $number){
-                    //queue
-                    //$testMsg = $instance->sendMessage($message, $signalwire_config->get('sender'), $number);
-                    $data = array(
-                        'message' => $message,
-                        'from' => $signalwire_config->get('sender'),
-                        'to' => $number
-                    );
+            $queue = \Drupal::queue('signalwire_message_queue');
+            $queue->createQueue();
 
-                    $queue->createItem($data);
-                }
+            $numbers = explode(',', $entity->recipient_details['recipients']);
+            foreach ($numbers as $number){
+                //queue for sending.
+                $data = array(
+                    'message' => $message,
+                    'from' => $signalwire_config->get('sender'),
+                    'to' => $number,
+                    'sender_type' => $sender_type,
+                );
+
+                $queue->createItem($data);
             }
-            elseif ($entity->recipient_details['recipient_type'] == 'number_groups'){
-                //get numbers belonging to number group
-            }
+
             //do not save message if frequency is equal to zero or set to once.
             if ($frequency != 0){
+
+                $value = array(
+                    'node' => $entity->id(),
+                    'message' => $message,
+                    'from' => $signalwire_config->get('sender'),
+                    'recipients' => serialize(array(
+                        //'type' => $entity->recipient_details['recipient_type'],
+                        'numbers' => explode(',', $entity->recipient_details['recipients'])
+                    )),
+                    'frequency' => $frequency,
+                    'date_sent' => $entity->get('created')->value,
+                    'date_next_send' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency'])
+                );
+
+                $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');
                 $signalwire_messaging_manager->saveMessage($value);
             }
         }
     }
-}
-function processRecipients($recipients) {
-
 }

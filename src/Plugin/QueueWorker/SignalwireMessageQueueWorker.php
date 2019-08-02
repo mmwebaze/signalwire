@@ -5,6 +5,7 @@ namespace Drupal\signalwire\Plugin\QueueWorker;
 use Drupal\Core\Config\ConfigFactory;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\Queue\QueueWorkerBase;
+use Drupal\Core\Queue\SuspendQueueException;
 use Drupal\signalwire\Plugin\Signalwire\SignalwireManager;
 use Drupal\signalwire\Plugin\Signalwire\SignalwirePluginBase;
 use Drupal\signalwire\Plugin\Signalwire\SignalwireServiceInterface;
@@ -33,6 +34,8 @@ class SignalwireMessageQueueWorker extends QueueWorkerBase implements ContainerF
      * @var string
      */
     protected $gateWay;
+    protected $sender;
+    protected $senderType;
 
     /**
      * SignalwireMessageQueueWorker constructor.
@@ -47,7 +50,9 @@ class SignalwireMessageQueueWorker extends QueueWorkerBase implements ContainerF
         parent::__construct($configuration, $plugin_id, $plugin_definition);
         $this->signalwirePluginManager = $signalwirePluginManager;
         $signalwireConfigs = $configFactory->get('signalwire.config');
-        $this->gateway = $signalwireConfigs->get('client');
+        $this->gateWay = $signalwireConfigs->get('client');
+        $this->sender = $signalwireConfigs->get('sender');
+        $this->senderType = $signalwireConfigs->get('sender_type');
     }
 
     /**
@@ -67,7 +72,13 @@ class SignalwireMessageQueueWorker extends QueueWorkerBase implements ContainerF
      * {@inheritdoc}
      */
     public function processItem($data) {
-        $instance = $this->signalwirePluginManager->createInstance($this->gateway);
-        $instance->sendMessage($data['message'], $data['from'], $data['to']);
+        $instance = $this->signalwirePluginManager->createInstance($this->gateWay);
+        if ($this->gateWay != 'none'){
+            $messageStatus = $instance->sendMessage($data['message'], $this->sender, $data['to'], $this->senderType);
+
+            if (is_null($messageStatus)){
+                throw new SuspendQueueException('Sending messages has failed and will tried again later.');
+            }
+        }
     }
 }

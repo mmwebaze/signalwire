@@ -23,19 +23,43 @@ interface SignalwireServiceInterface extends PluginInspectionInterface {
      *   The message body.
      *
      * @param string $fromNumber
-     *   The senders number.
+     *   The senders number or number group id.
      *
      * @param string $recipientNumber
      *   The recipient number.
      *
+     * @param string $senderType
+     *   The type of sender (telephone or number_group)
+     *
      * @return MessageList
      *  The message list.
      */
-    public function sendMessage(string $message, string $fromNumber, string $recipientNumber);
+    public function sendMessage(string $message, string $fromNumber, string $recipientNumber, string $senderType = 'telephone');
 
     /**
-     * Retrieves a list of
-     * @return mixed
+     * Gets a list of Number Groups .
+     *
+     * @return array
+     *   Returns a list of your Number Groups
      */
     public function numberGroups();
+
+    /**
+     * Gets number group memberships.
+     *
+     * @param string $numberGroupId
+     *   The number group id.
+     *
+     * @return array
+     *   Returns a list of Number Group's Memberships.
+     */
+    public function numberGroupMemberships(string $numberGroupId);
+
+    /**
+     * Gets a list of SIP Endpoints.
+     *
+     * @return array
+     *   Returns a list of SIP Endpoints.
+     */
+    public function phoneNumbers();
 }
