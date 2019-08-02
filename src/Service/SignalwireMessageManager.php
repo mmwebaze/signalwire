@@ -60,13 +60,16 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
                     'from' => $values['from'],
                     'recipients' => $values['recipients'],
                     'frequency' => $values['frequency'],
-                    'date_sent' => $values['date_sent'],
-                    'date_next_send' => $values['date_next_send']
+                    'created' => $values['created'],
+                    'next_send_date' => $values['next_send_date'],
+                    'stop_date' => $values['stop_date'],
                 );
-                $this->connection->insert('signalware_messages')->fields(['node', 'message', 'from', 'recipients', 'frequency', 'date_sent', 'date_next_send'])
+                $this->connection->insert('signalware_messages')->fields(['node', 'message', 'from', 'recipients',
+                    'frequency', 'created', 'next_send_date', 'stop_date'])
                     ->values($value)->execute();
+
+                $this->messenger->addMessage("The text message associated with id ".$values['node']." has been saved.", MessengerInterface::TYPE_STATUS);
             }
-            $this->messenger->addMessage('The message has been saved.');
         }
         catch (\Exception $e) {
             //log for admin and debug purposes.

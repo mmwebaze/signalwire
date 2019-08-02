@@ -14,7 +14,7 @@ class SignalwireUtil {
      *   The unix timestamp the message was last sent.
      *
      * @param string $frequency
-     *   The frequency (daily, weekly, and monthly) a the message will be sent.
+     *   The frequency (daily - 1, weekly - 2, and monthly - 3) a the message will be sent.
      *
      * @return integer
      *   A unix timestamp the message will next be sent.
@@ -40,8 +40,4 @@ class SignalwireUtil {
 
         return $nextSendTimeStamp;
     }
-    public static function processNumberGroups(){
-
-    }
-    //thoughtbot
 }

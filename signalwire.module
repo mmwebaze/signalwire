@@ -3,6 +3,7 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use \Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\signalwire\Util\SignalwireUtil;
+use Drupal\Core\Datetime\DrupalDateTime;
 
 /**
  * Implements hook_help().
@@ -102,6 +103,14 @@ function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id)
             '#weight' => -1,
             '#required' => TRUE,
         );
+        $form['recipient_details']['stop_date'] = array(
+            '#title' => t('Message Stop Date'),
+            '#type' => 'datetime',
+            '#date_date_element' => 'date',
+            '#date_time_element' => 'none',
+            '#default_value' => DrupalDateTime::createFromTimestamp(time()),
+            '#required' => TRUE,
+        );
         /*$form['recipient_details']['recipient_type'] = array(
             '#type' => 'radios',
             '#title' => t('Recipient types'),
@@ -192,9 +201,9 @@ function signalwire_entity_insert(EntityInterface $entity) {
                 case 'monthly':
                     $frequency = 3;
                     break;
+                default:
+                    $frequency = 0;
             }
-
-
 
             $queue = \Drupal::queue('signalwire_message_queue');
             $queue->createQueue();
@@ -203,6 +212,8 @@ function signalwire_entity_insert(EntityInterface $entity) {
             foreach ($numbers as $number){
                 //queue for sending.
                 $data = array(
+                    'id' => $entity->id(),
+                    'frequency' => $frequency,
                     'message' => $message,
                     'from' => $signalwire_config->get('sender'),
                     'to' => $number,
@@ -214,6 +225,7 @@ function signalwire_entity_insert(EntityInterface $entity) {
 
             //do not save message if frequency is equal to zero or set to once.
             if ($frequency != 0){
+                $dateTime = new DateTime($entity->recipient_details['stop_date']->format('Y-m-d'));
 
                 $value = array(
                     'node' => $entity->id(),
@@ -224,8 +236,10 @@ function signalwire_entity_insert(EntityInterface $entity) {
                         'numbers' => explode(',', $entity->recipient_details['recipients'])
                     )),
                     'frequency' => $frequency,
-                    'date_sent' => $entity->get('created')->value,
-                    'date_next_send' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency'])
+                    //@todo replace date_sent with created
+                    'created' => $entity->get('created')->value,
+                    'next_send_date' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency']),
+                    'stop_date' => $dateTime->getTimestamp()
                 );
 
                 $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');

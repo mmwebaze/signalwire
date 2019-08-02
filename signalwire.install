@@ -1,4 +1,7 @@
 <?php
+
+use Drupal\Core\Queue\QueueFactory;
+
 /**
  * Implements hook_schema().
  */
@@ -38,19 +41,19 @@ function signalwire_schema() {
                 'not null' => TRUE,
                 'description' => "The frequency the message is sent out i.e. 0 - daily, 1 - weekly and 2 - monthly.",
             ),
-            'date_sent' => array(
+            'created' => array(
                 'type' => 'int',
                 'not null' => TRUE,
                 'default' => 0,
                 'description' => "Unix timestamp message is sent."
             ),
-            'date_next_send' => array(
+            'next_send_date' => array(
                 'type' => 'int',
                 'not null' => TRUE,
                 'default' => 0,
                 'description' => "Unix timestamp when next message will be sent."
             ),
-            'date_stop' => array(
+            'stop_date' => array(
                 'type' => 'int',
                 'not null' => TRUE,
                 'default' => 0,
@@ -61,4 +64,14 @@ function signalwire_schema() {
     );
 
     return $schema;
+}
+/**
+ * Implements hook_uninstall.
+ */
+function signalwire_uninstall(){
+    //clean queue of any lingering signalwire message items
+    /** @var QueueFactory $queue */
+    $queue = \Drupal::service('queue');
+    $signal_message_queue = $queue->get('signalwire_message_queue');
+    $signal_message_queue->deleteQueue();
 }
