@@ -207,44 +207,86 @@ function signalwire_entity_insert(EntityInterface $entity) {
 
             $queue = \Drupal::queue('signalwire_message_queue');
             $queue->createQueue();
+            $data = array(
+                'id' => $entity->id(),
+                'frequency' => $frequency,
+                'message' => $message,
+                //'from' => $signalwire_config->get('sender'),
+                'to' => $entity->recipient_details['recipients'],
+                'sender_type' => $sender_type,
+            );
+            $queue->createItem($data);
 
-            $numbers = explode(',', $entity->recipient_details['recipients']);
+            /*$numbers = explode(',', $entity->recipient_details['recipients']);
             foreach ($numbers as $number){
                 //queue for sending.
                 $data = array(
                     'id' => $entity->id(),
                     'frequency' => $frequency,
                     'message' => $message,
-                    'from' => $signalwire_config->get('sender'),
+                    //'from' => $signalwire_config->get('sender'),
                     'to' => $number,
                     'sender_type' => $sender_type,
                 );
 
                 $queue->createItem($data);
-            }
+            }*/
 
             //do not save message if frequency is equal to zero or set to once.
             if ($frequency != 0){
-                $dateTime = new DateTime($entity->recipient_details['stop_date']->format('Y-m-d'));
+                //@todo move this section to utility class
+                $created = new DateTime('@'.$entity->get('created')->value);
+                $created->setTime(0,0,0);
+                $created->format('Y-m-d');
+                $created_date = $created->getTimestamp();
+
+                $stopDate = new DateTime($entity->recipient_details['stop_date']->format('Y-m-d'));
+                $stopDate->setTime(0,0,0);
+                $stop_date = $stopDate->getTimestamp();
+                //$next_send_date = SignalwireUtil::nextSendTimeStamp($created->getTimestamp(), $entity->recipient_details['message_frequency']);
 
                 $value = array(
                     'node' => $entity->id(),
                     'message' => $message,
-                    'from' => $signalwire_config->get('sender'),
-                    'recipients' => serialize(array(
-                        //'type' => $entity->recipient_details['recipient_type'],
-                        'numbers' => explode(',', $entity->recipient_details['recipients'])
-                    )),
+                    /*'recipients' => serialize(array(
+                        'numbers' => $entity->recipient_details['recipients']
+                    ))*/
+                    'recipients' => serialize($entity->recipient_details['recipients']),
                     'frequency' => $frequency,
-                    //@todo replace date_sent with created
-                    'created' => $entity->get('created')->value,
-                    'next_send_date' => SignalwireUtil::nextSendTimeStamp($entity->get('created')->value, $entity->recipient_details['message_frequency']),
-                    'stop_date' => $dateTime->getTimestamp()
+                    'created' => $created_date,
+                    'next_send_date' => $created_date,
+                    'stop_date' => $stop_date <= $created_date ? 0 : $stop_date,
                 );
 
                 $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');
                 $signalwire_messaging_manager->saveMessage($value);
             }
         }
+    }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function signalwire_cron(){
+    $dateTime = new DateTime();
+    $dateTime->format('Y-m-d');
+    $dateTime->setTime(0,0,0);
+
+    $signalwireManagerService = Drupal::service('signalwire_messaging.manager');
+    $messages = $signalwireManagerService->getMessagesByDate($dateTime->getTimestamp());
+
+    $queue = \Drupal::queue('signalwire_message_queue');
+    $queue->createQueue();
+
+    foreach ($messages as $message){
+
+        $data['message'] = $message->message;
+        $data['to'] = unserialize($message->recipients);
+        $data['node'] = $message->node;
+        $data['frequency'] = $message->frequency;
+        $data['next_send_date'] = $message->next_send_date;
+        $queue->createItem($data);
+       // print_r($data);
     }
 }

@@ -74,11 +74,16 @@ class SignalwireMessageQueueWorker extends QueueWorkerBase implements ContainerF
     public function processItem($data) {
         $instance = $this->signalwirePluginManager->createInstance($this->gateWay);
         if ($this->gateWay != 'none'){
-            $messageStatus = $instance->sendMessage($data['message'], $this->sender, $data['to'], $this->senderType);
+            $numbers = explode(',', $data['to']);
+            $messageStatus = NULL;
 
-            if (is_null($messageStatus)){
-                throw new SuspendQueueException('Sending messages has failed and will tried again later.');
+            foreach ($numbers as $number){
+                $messageStatus = $instance->sendMessage($data['message'], $this->sender, $number, $this->senderType);
             }
+
+            /*if (is_null($messageStatus)){
+                throw new SuspendQueueException('Sending messages has failed and will be tried again later.');
+            }*/
         }
     }
 }

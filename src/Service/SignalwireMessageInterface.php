@@ -19,7 +19,7 @@ interface SignalwireMessageInterface {
      *    'date_next_send' => 'Unix timestamp message will next be sent',
      *    'date_stop' => 'Unix timestamp message sending will stop'
      *   )
-     * @return integer
+     * @return int
      *   The status (0 or 1) of the insert process.
      */
     public function saveMessage(array $message);
@@ -44,7 +44,7 @@ interface SignalwireMessageInterface {
      * @param int $date
      *   The next send unix timestamp.
      *
-     * @return integer
+     * @return int
      *   The status (0 or 1).
      */
     public function setNextSend(int $messageId, int $date);
@@ -59,4 +59,15 @@ interface SignalwireMessageInterface {
      *   The status (0 or 1).
      */
     public function removeMessage(int $messageId);
+
+    /**
+     * Gets messages by next send date.
+     *
+     * @param int $nextSendDate
+     *   The next send date unix timestamp.
+     *
+     * @return array
+     *   Array of messages.
+     */
+    public function getMessagesByDate(int $nextSendDate);
 }

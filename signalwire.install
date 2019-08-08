@@ -21,14 +21,6 @@ function signalwire_schema() {
                 //'default' => '',
                 'description' => "Message body being sent.",
             ),
-            //remove from column as this can be got from the config
-            'from' => array(
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => TRUE,
-                //'default' => '',
-                'description' => "The sender number.",
-            ),
             'recipients' => array(
                 'type' => 'blob',
                 //'length' => 255,
@@ -65,6 +57,7 @@ function signalwire_schema() {
 
     return $schema;
 }
+
 /**
  * Implements hook_uninstall.
  */

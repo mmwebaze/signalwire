@@ -57,14 +57,14 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
                 $value = array(
                     'node' => $values['node'],
                     'message' => $values['message'],
-                    'from' => $values['from'],
+                    //'from' => $values['from'],
                     'recipients' => $values['recipients'],
                     'frequency' => $values['frequency'],
                     'created' => $values['created'],
                     'next_send_date' => $values['next_send_date'],
                     'stop_date' => $values['stop_date'],
                 );
-                $this->connection->insert('signalware_messages')->fields(['node', 'message', 'from', 'recipients',
+                $this->connection->insert('signalware_messages')->fields(['node', 'message', 'recipients',
                     'frequency', 'created', 'next_send_date', 'stop_date'])
                     ->values($value)->execute();
 
@@ -84,6 +84,19 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
      */
     public function getMessage($messageId) {
 
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getMessagesByDate(int $nextSendDate) {
+        $query = $this->connection->select('signalware_messages', 'sm');
+        $query->fields('sm', ['node', 'message', 'recipients', 'frequency', 'next_send_date'])
+            ->condition('next_send_date', $nextSendDate);
+            //->condition('stop_date', $nextSendDate, '<=');
+        $results = $query->execute()->fetchAll();
+
+        return $results;
     }
 
     /**
