@@ -1,0 +1,77 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.field.node.signalwire_message.field_message_frequency
+    - field.field.node.signalwire_message.field_recipients
+    - field.field.node.signalwire_message.field_send_date
+    - field.field.node.signalwire_message.field_send_status
+    - field.field.node.signalwire_message.field_signalwire_message
+    - field.field.node.signalwire_message.field_stop_date
+    - node.type.signalwire_message
+  module:
+    - options
+    - user
+id: node.signalwire_message.default
+targetEntityType: node
+bundle: signalwire_message
+mode: default
+content:
+  field_message_frequency:
+    weight: 104
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: list_default
+    region: content
+  field_recipients:
+    weight: 105
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_send_date:
+    weight: 106
+    label: above
+    settings:
+      date_format: medium
+      custom_date_format: ''
+      timezone: ''
+    third_party_settings: {  }
+    type: timestamp
+    region: content
+  field_send_status:
+    weight: 108
+    label: above
+    settings:
+      format: default
+      format_custom_false: ''
+      format_custom_true: ''
+    third_party_settings: {  }
+    type: boolean
+    region: content
+  field_signalwire_message:
+    weight: 101
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+    type: basic_string
+    region: content
+  field_stop_date:
+    weight: 107
+    label: above
+    settings:
+      date_format: medium
+      custom_date_format: ''
+      timezone: ''
+    third_party_settings: {  }
+    type: timestamp
+    region: content
+  links:
+    weight: 100
+    settings: {  }
+    third_party_settings: {  }
+    region: content
+hidden:
+  langcode: true

@@ -1,0 +1,18 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_signalwire_message
+    - node.type.signalwire_message
+id: node.signalwire_message.field_signalwire_message
+field_name: field_signalwire_message
+entity_type: node
+bundle: signalwire_message
+label: Message
+description: ''
+required: true
+translatable: false
+default_value: {  }
+default_value_callback: ''
+settings: {  }
+field_type: string_long

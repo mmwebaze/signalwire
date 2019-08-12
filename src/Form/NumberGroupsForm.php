@@ -48,7 +48,6 @@ class NumberGroupsForm extends FormBase {
         $numberGroups = $instance->numberGroups();
         $numberGroupMemberships = $instance->numberGroupMemberships('782f5bf8-e424-477d-89e1-a975690fdeff');
         $phoneNumbers = $instance->phoneNumbers();
-        print_r($phoneNumbers);die;
 
        /* $header = array(
             'name' => $this->t('Name'),

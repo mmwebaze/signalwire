@@ -3,3 +3,5 @@ type: module
 description: 'Integrates with signalwire an advanced communications platform.'
 core: 8.x
 package: 'Signalwire'
+dependencies:
+  - drupal:telephone

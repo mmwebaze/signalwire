@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_stop_date
+    - node.type.signalwire_message
+id: node.signalwire_message.field_stop_date
+field_name: field_stop_date
+entity_type: node
+bundle: signalwire_message
+label: 'Stop date'
+description: 'The date out-going messages are stopped.'
+required: true
+translatable: false
+default_value:
+  -
+    value: 1565524190
+default_value_callback: ''
+settings: {  }
+field_type: timestamp

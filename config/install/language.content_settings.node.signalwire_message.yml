@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - node.type.signalwire_message
+id: node.signalwire_message
+target_entity_type_id: node
+target_bundle: signalwire_message
+default_langcode: site_default
+language_alterable: false

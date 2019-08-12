@@ -14,7 +14,7 @@ interface SignalwireMessageInterface {
      *    'node' => 'node or message id',
      *    'message' => 'The message body',
      *    'recipients' => 'Serialized array of recipient numbers',
-     *    'frequency' => '0, 1 or 2'
+     *    'frequency' => '0, 1, 2, or 3'
      *    'created' => 'Unix timestamp message was created',
      *    'date_next_send' => 'Unix timestamp message will next be sent',
      *    'date_stop' => 'Unix timestamp message sending will stop'
@@ -41,33 +41,30 @@ interface SignalwireMessageInterface {
      * @param int $messageId
      *   The id of the message.
      *
-     * @param int $date
+     * @param int $nextSendDate
      *   The next send unix timestamp.
+     *
+     * @param int $stopDate
+     *   The stop date unix timestamp.
+     * @param int $frequency
+     *   The frequency the message is sent out. 0 - once, 1 - daily, 2 - weekly and 3 - monthly. Defaults to once.
      *
      * @return int
      *   The status (0 or 1).
      */
-    public function setNextSend(int $messageId, int $date);
+    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, int $frequency = 0);
 
     /**
-     * Removes a message from  signalware_messages database table. Any messages already queued however won't be removed.
+     * Gets messages by sending date.
      *
-     * @param integer $messageId
-     *   The id of the message.
+     * @param int $sendDate
+     *   The send date unix timestamp.
      *
-     * @return integer
-     *   The status (0 or 1).
+     * @param string $entityType
+     *   The entity type.
+     *
+     * @return \Drupal\Core\Entity\EntityInterface[]
+     *   Array of entity objects.
      */
-    public function removeMessage(int $messageId);
-
-    /**
-     * Gets messages by next send date.
-     *
-     * @param int $nextSendDate
-     *   The next send date unix timestamp.
-     *
-     * @return array
-     *   Array of messages.
-     */
-    public function getMessagesByDate(int $nextSendDate);
+    public function getMessagesBySendDate(int $sendDate, string $entityType);
 }

@@ -1,2 +1,2 @@
-messaging:
-  entities: ~
+client: default
+sender_type: telephone

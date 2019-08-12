@@ -1,0 +1,20 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_send_date
+    - node.type.signalwire_message
+id: node.signalwire_message.field_send_date
+field_name: field_send_date
+entity_type: node
+bundle: signalwire_message
+label: 'Send date'
+description: 'The date the message will be sent on.'
+required: true
+translatable: false
+default_value:
+  -
+    value: 1565524112
+default_value_callback: ''
+settings: {  }
+field_type: timestamp

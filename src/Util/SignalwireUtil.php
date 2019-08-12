@@ -10,34 +10,30 @@ namespace Drupal\signalwire\Util;
 class SignalwireUtil {
 
     /**
-     * @param integer $sendTimeStamp
+     * @param int $sendTimeStamp
      *   The unix timestamp the message was last sent.
      *
      * @param string $frequency
-     *   The frequency (daily - 1, weekly - 2, and monthly - 3) a the message will be sent.
+     *   The frequency (once - 0, daily - 1, weekly - 2, and monthly - 3) a the message will be sent.
      *
      * @return integer
      *   A unix timestamp the message will next be sent.
      */
-    public static function nextSendTimeStamp($sendTimeStamp, $frequency){
-        //$timenow = date('Y-m-d');
-        $nextSendTimeStamp = $sendTimeStamp;
+    public static function nextSendTimeStamp(int $sendTimeStamp, string $frequency){
 
         switch ($frequency) {
-            case 'daily':
+            case '1':
 
-                $nextSendTimeStamp = $nextSendTimeStamp + (24 * 60 * 60);
-                break;
-            case 'weekly':
+                return $sendTimeStamp + (24 * 60 * 60);
+            case '2':
 
-                $nextSendTimeStamp = $nextSendTimeStamp + (7 * 24 * 60 * 60);
-                break;
-            case 'monthly':
+                return $sendTimeStamp + (7 * 24 * 60 * 60);
+            case '3':
 
-                $nextSendTimeStamp = $nextSendTimeStamp + (31 * 24 * 60 * 60);
-                break;
+                return $sendTimeStamp + (31 * 24 * 60 * 60);
+            default: //everything else defaults to once
+
+                return $sendTimeStamp;
         }
-
-        return $nextSendTimeStamp;
     }
 }

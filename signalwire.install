@@ -3,62 +3,6 @@
 use Drupal\Core\Queue\QueueFactory;
 
 /**
- * Implements hook_schema().
- */
-function signalwire_schema() {
-    $schema['signalware_messages'] = array(
-        'description' => 'Stores sent out messages.',
-        'fields' => array(
-            'node' => array(
-                'type' => 'int',
-                'not null' => TRUE,
-                'description' => 'Unique node ID.',
-            ),
-            'message' => array(
-                'type' => 'text',
-                //'length' => 255,
-                'not null' => TRUE,
-                //'default' => '',
-                'description' => "Message body being sent.",
-            ),
-            'recipients' => array(
-                'type' => 'blob',
-                //'length' => 255,
-                'not null' => FALSE,
-                'size' => 'big',
-                'description' => "A collection of recipients.",
-            ),
-            'frequency' => array(
-                'type' => 'int',
-                'not null' => TRUE,
-                'description' => "The frequency the message is sent out i.e. 0 - daily, 1 - weekly and 2 - monthly.",
-            ),
-            'created' => array(
-                'type' => 'int',
-                'not null' => TRUE,
-                'default' => 0,
-                'description' => "Unix timestamp message is sent."
-            ),
-            'next_send_date' => array(
-                'type' => 'int',
-                'not null' => TRUE,
-                'default' => 0,
-                'description' => "Unix timestamp when next message will be sent."
-            ),
-            'stop_date' => array(
-                'type' => 'int',
-                'not null' => TRUE,
-                'default' => 0,
-                'description' => "Unix timestamp when sending message will be stopped."
-            ),
-        ),
-        'primary key' => array('node'),
-    );
-
-    return $schema;
-}
-
-/**
  * Implements hook_uninstall.
  */
 function signalwire_uninstall(){

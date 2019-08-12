@@ -1,0 +1,22 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - field.storage.node.field_message_frequency
+    - node.type.signalwire_message
+  module:
+    - options
+id: node.signalwire_message.field_message_frequency
+field_name: field_message_frequency
+entity_type: node
+bundle: signalwire_message
+label: 'Message frequency'
+description: ''
+required: true
+translatable: false
+default_value:
+  -
+    value: 0
+default_value_callback: ''
+settings: {  }
+field_type: list_integer

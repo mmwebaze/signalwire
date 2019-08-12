@@ -5,6 +5,7 @@ namespace Drupal\signalwire\Service;
 use Drupal\Core\Database\Driver\mysql\Connection;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
+use Drupal\Core\Entity\EntityTypeManager;
 
 class SignalwireMessageManager implements SignalwireMessageInterface {
 
@@ -30,10 +31,18 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
     protected $messenger;
 
     /**
+     * @var EntityTypeManager
+     */
+    protected $entityTypeManager;
+
+    /**
      * SignalwireMessageManager constructor.
      *
      * @param Connection $connection
      *   The connection service.
+     *
+     * @param EntityTypeManager $entityTypeManager
+     *   The entity type service.
      *
      * @param LoggerChannelFactoryInterface $loggerChannelFactory
      *   The logger channel factory.
@@ -41,8 +50,9 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
      * @param MessengerInterface $messenger
      *   A messenger service.
      */
-    public function __construct(Connection $connection, LoggerChannelFactoryInterface $loggerChannelFactory, MessengerInterface $messenger) {
+    public function __construct(Connection $connection, EntityTypeManager $entityTypeManager, LoggerChannelFactoryInterface $loggerChannelFactory, MessengerInterface $messenger) {
         $this->connection = $connection;
+        $this->entityTypeManager = $entityTypeManager;
         $this->loggerChannelFactory = $loggerChannelFactory->get('signalwire');
         $this->messenger = $messenger;
     }
@@ -69,6 +79,7 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
                     ->values($value)->execute();
 
                 $this->messenger->addMessage("The text message associated with id ".$values['node']." has been saved.", MessengerInterface::TYPE_STATUS);
+                $this->loggerChannelFactory->notice('Message with id '.$values['node'].' has been added.');
             }
         }
         catch (\Exception $e) {
@@ -89,27 +100,37 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
     /**
      * {@inheritdoc}
      */
-    public function getMessagesByDate(int $nextSendDate) {
-        $query = $this->connection->select('signalware_messages', 'sm');
-        $query->fields('sm', ['node', 'message', 'recipients', 'frequency', 'next_send_date'])
-            ->condition('next_send_date', $nextSendDate);
-            //->condition('stop_date', $nextSendDate, '<=');
-        $results = $query->execute()->fetchAll();
+    public function getMessagesBySendDate(int $sendDate, string $entityType = 'node') {
+       $storage = $this->entityTypeManager->getStorage($entityType);
+       $query = $storage->getQuery();
+       $query->condition('field_send_date', $sendDate);
+       $query->condition('field_stop_date', $sendDate, '<=');
+       $query->condition('field_send_status', 1);
+       $messageIds = $query->execute();
+       $messages = $storage->loadMultiple($messageIds);
 
-        return $results;
+       return $messages;
     }
 
     /**
      * {@inheritdoc}
      */
-    public function setNextSend(int $messageId, int $date){
+    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, int $frequency = 0){
+        $storage = $this->entityTypeManager->getStorage('node');
+        $message = $storage->load($messageId);
+        $message->field_send_date = $nextSendDate;
 
-    }
+        //check if frequency is once, then set send status to off.
+        if ($frequency == 0){
+            $message->field_send_status = 0;
+        }
+        else {
+            if ($nextSendDate > $stopDate){
+                //set send status to stop.
+                $message->field_send_status = 0;
+            }
+        }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function removeMessage(int $messageId){
-
+        $message->save();
     }
 }

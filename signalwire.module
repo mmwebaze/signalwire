@@ -1,7 +1,10 @@
 <?php
+
+use Drupal\Core\Queue\QueueInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use \Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityInterface;
+use Drupal\datetime\Plugin\Field\FieldType\DateTimeItemInterface;
 use Drupal\signalwire\Util\SignalwireUtil;
 use Drupal\Core\Datetime\DrupalDateTime;
 
@@ -20,247 +23,58 @@ function signalwire_help($route_name, RouteMatchInterface $route_match) {
         default:
     }
 }
-
 /**
- * Implements hook_form_alter().
- *
- * Adding signalwire messaging settings to managed fields form of a fieldable entity.
+ * Implements hook_form_FORM_ID_alter.
  */
-function signalwire_form_alter(&$form, FormStateInterface $form_state, $form_id) {
-
-    /** @var  \Drupal\Core\Config\ConfigFactoryInterface $config */
-    $config = Drupal::service('config.factory');
-    $signalwire_config = $config->get('signalwire.config');
-    $signalwire_nodes = $signalwire_config->get('messaging.entities.node');
-    if (!is_null($signalwire_nodes)){
-        $signalwire_nodes = array_keys($signalwire_config->get('messaging.entities.node'));
-    }
-    else{
-        $signalwire_nodes = array();
-    }
-
-    $messaging_forms = array();
-
-    foreach ($signalwire_nodes as $signalwire_node){
-        array_push($messaging_forms, 'node_'.$signalwire_node.'_form');
-    }
-
-    if ($form_id == 'entity_view_display_edit_form'){
-
-        $signalwire_nodes = $signalwire_config->get('messaging.entities');
-
-        /** @var \Drupal\field_ui\Form\EntityViewDisplayEditForm $form_object */
-        $form_object = $form_state->getFormObject();
-
-        /** @var  \Drupal\Core\Entity\Entity\EntityViewDisplay $entity */
-        $entity = $form_object->getEntity();
-
-        $target_type = $entity->getTargetEntityTypeId();
-
-        $target_bundle = $entity->getTargetBundle();
-
-        $field_definitions = \Drupal::service('entity_field.manager')->getFieldDefinitions($target_type, $target_bundle);
-        $fields = $form['#fields'];
-
-        $form['enabled_messaging_fields'] = array(
-            '#type' => 'details',
-            '#open' => FALSE,
-            '#title' => t('Messaging settings'),
-            '#description' => t('Selected fields will make up the text message body.'),
-            '#tree' => TRUE,
-        );
-
-        foreach ($fields as $field){
-            $form['enabled_messaging_fields'][$target_type.'#'.$target_bundle.'#'.$field] = array(
-                '#type' => 'checkbox',
-                '#title' => $field_definitions[$field]->getLabel(),
-                '#default_value' => $signalwire_nodes[$target_type][$target_bundle][$field],
-            );
-        }
-
-        $form['actions']['submit']['#submit'][] = 'Drupal\signalwire\Service\SignalwireHandler::signalwireManagedFields';
-    }
-    else if(in_array($form_id, $messaging_forms)) {
-        $form['recipient_details'] = array(
-            '#type' => 'details',
-            '#open' => TRUE,
-            '#title' => t('Recipient details'),
-            //'#description' => t('Set.'),
-            '#tree' => TRUE,
-        );
-
-        $form['recipient_details']['message_on_node_creation'] = array(
-            '#type' => 'checkbox',
-            '#title' => t('This node is configured to support text messaging'),
-            '#weight' => -1,
-            '#default_value' => '1',
-        );
-        $form['recipient_details']['recipients'] = array(
-            '#title' => t('Recipient(s)'),
-            '#type' => 'textarea',
-            '#description' => t('List of recipient telephone numbers separated by comma.'),
-            '#resizable' => TRUE,
-            '#weight' => -1,
-            '#required' => TRUE,
-        );
-        $form['recipient_details']['stop_date'] = array(
-            '#title' => t('Message Stop Date'),
-            '#type' => 'datetime',
-            '#date_date_element' => 'date',
-            '#date_time_element' => 'none',
-            '#default_value' => DrupalDateTime::createFromTimestamp(time()),
-            '#required' => TRUE,
-        );
-        /*$form['recipient_details']['recipient_type'] = array(
-            '#type' => 'radios',
-            '#title' => t('Recipient types'),
-            '#options' => array(
-                'telephone_numbers' => t('Telephone number(s)'),
-                'number_groups' => t('Number Group(s)'),
-            ),
-            '#weight' => -1,
-            '#default_value' => 'telephone_numbers',
-            '#required' => TRUE,
-        );*/
-        $form['recipient_details']['message_frequency'] = array(
-            '#type' => 'radios',
-            '#title' => t('Message Frequency'),
-            '#options' => array(
-                'once' => t('Once on content create'),
-                'daily' => t('Daily'),
-                'weekly' => t('Weekly'),
-                'monthly' => t('Monthly'),
-            ),
-            '#weight' => -1,
-            '#default_value' => 'once',
-            '#required' => TRUE,
-        );
-
-        $form['#entity_builders'][] = 'signalwire_node_builder';
-    }
+function signalwire_form_node_signalwire_message_form_alter(&$form, FormStateInterface $form_state, $form_id){
+    $form['#validate'][] = 'signalwire_form_node_signalwire_message_form_validate';
 }
 
 /**
- * Entity form builder to add the message_on_node_creation information to the node.
- *
- * @todo: Remove this in favor of an entity field.
+ * Validates submission values in the node_signalwire_message_form form.
  */
-function signalwire_node_builder($entity_type, \Drupal\node\NodeInterface $entity, &$form, FormStateInterface $form_state) {
-    /*$entity->message_on_node_creation = $form_state->getValue('message_on_node_creation');*/
-    $entity->recipient_details = $form_state->getValue('recipient_details');
+function signalwire_form_node_signalwire_message_form_validate(&$form, FormStateInterface $form_state){
+    /** @var Drupal\Core\Datetime\DrupalDateTime $field_send_date */
+    $field_send_date = $form_state->getValue('field_send_date')[0]['value'];
+    $field_send_date = new DrupalDateTime('@'.$field_send_date->getTimestamp());
+    $field_send_date->setTime(0,0,0);
+
+    /** @var Drupal\Core\Datetime\DrupalDateTime $field_stop_date */
+    $field_stop_date = $form_state->getValue('field_stop_date')[0]['value'];
+    $field_stop_date = new DrupalDateTime('@'.$field_stop_date->getTimestamp());
+    $field_stop_date->setTime(0,0,0);
+
+    if ($field_send_date->getTimestamp() > $field_stop_date->getTimestamp()){
+        $form_state->setErrorByName('field_send_date', t('The start date cannot be greater than the stop date.'));
+    }
+
+    $now = new DrupalDateTime('now', DateTimeItemInterface::STORAGE_TIMEZONE);
+    $now->setTime(0, 0, 0);
+
+    if ($field_send_date->getTimestamp() < $now->getTimestamp()){
+        $form_state->setErrorByName('field_send_date', t('The start date cannot be less than the current date.'));
+    }
+
+    if ($field_stop_date->getTimestamp() < $now->getTimestamp()){
+        $form_state->setErrorByName('field_stop_date', t('The stop date cannot be less than the current date.'));
+    }
 }
-
 /**
- * Implements hook_entity_insert().
+ * Implements hook_entity_presave.
  */
-function signalwire_entity_insert(EntityInterface $entity) {
+function signalwire_node_presave(EntityInterface $entity){
 
-    $config = Drupal::service('config.factory');
-    $signalwire_config = $config->get('signalwire.config');
-    $gateway = $signalwire_config->get('client');
-    $sender_type = $signalwire_config->get('sender_type');
+    if ($entity->bundle() == 'signalwire_message'){
+        $field_send_date = new DrupalDateTime('@'.$entity->field_send_date->value);
+        $field_send_date->setTime(0,0,0);
+        $entity->field_send_date = $field_send_date->getTimestamp();
 
-    if ($gateway != 'none'){
+        $field_stop_date = new DrupalDateTime('@'.$entity->field_stop_date->value);
+        $field_stop_date->setTime(0,0,0);
+        $entity->field_stop_date = $field_stop_date->getTimestamp();
 
-        $bundles = array_keys($signalwire_config->get('messaging.entities.node'));
-
-        if (in_array($entity->bundle(), $bundles)){
-            $fields = array_keys($signalwire_config->get('messaging.entities.node.'.$entity->bundle()));
-
-            $message = null;
-
-            //Create the message based on configured fields
-            foreach ($fields as $field){
-                $items = $entity->get($field)->getValue();
-
-                foreach ($items as $item){
-                    foreach ($item as $key => $value){
-                        switch ($key){
-                            case 'value':
-                                $value = trim(strip_tags($value));
-                                $message = $message.$value.'. ';
-                                break;
-                            case 'target_id':
-                                /** @todo implement entity reference values. **/
-                                break;
-                        }
-                    }
-                }
-            }
-
-            //send message out once on entity creation.
-            $frequency = 0;
-
-            switch ($entity->recipient_details['message_frequency']){
-                case 'daily':
-                    $frequency = 1;
-                    break;
-                case 'weekly':
-                    $frequency = 2;
-                    break;
-                case 'monthly':
-                    $frequency = 3;
-                    break;
-                default:
-                    $frequency = 0;
-            }
-
-            $queue = \Drupal::queue('signalwire_message_queue');
-            $queue->createQueue();
-            $data = array(
-                'id' => $entity->id(),
-                'frequency' => $frequency,
-                'message' => $message,
-                //'from' => $signalwire_config->get('sender'),
-                'to' => $entity->recipient_details['recipients'],
-                'sender_type' => $sender_type,
-            );
-            $queue->createItem($data);
-
-            /*$numbers = explode(',', $entity->recipient_details['recipients']);
-            foreach ($numbers as $number){
-                //queue for sending.
-                $data = array(
-                    'id' => $entity->id(),
-                    'frequency' => $frequency,
-                    'message' => $message,
-                    //'from' => $signalwire_config->get('sender'),
-                    'to' => $number,
-                    'sender_type' => $sender_type,
-                );
-
-                $queue->createItem($data);
-            }*/
-
-            //do not save message if frequency is equal to zero or set to once.
-            if ($frequency != 0){
-                //@todo move this section to utility class
-                $created = new DateTime('@'.$entity->get('created')->value);
-                $created->setTime(0,0,0);
-                $created->format('Y-m-d');
-                $created_date = $created->getTimestamp();
-
-                $stopDate = new DateTime($entity->recipient_details['stop_date']->format('Y-m-d'));
-                $stopDate->setTime(0,0,0);
-                $stop_date = $stopDate->getTimestamp();
-                //$next_send_date = SignalwireUtil::nextSendTimeStamp($created->getTimestamp(), $entity->recipient_details['message_frequency']);
-
-                $value = array(
-                    'node' => $entity->id(),
-                    'message' => $message,
-                    /*'recipients' => serialize(array(
-                        'numbers' => $entity->recipient_details['recipients']
-                    ))*/
-                    'recipients' => serialize($entity->recipient_details['recipients']),
-                    'frequency' => $frequency,
-                    'created' => $created_date,
-                    'next_send_date' => $created_date,
-                    'stop_date' => $stop_date <= $created_date ? 0 : $stop_date,
-                );
-
-                $signalwire_messaging_manager = Drupal::service('signalwire_messaging.manager');
-                $signalwire_messaging_manager->saveMessage($value);
-            }
+        if ($entity->field_message_frequency == 0 && $entity->field_send_date != $entity->field_stop_date){
+            $entity->field_stop_date = $entity->field_send_date;
         }
     }
 }
@@ -269,24 +83,42 @@ function signalwire_entity_insert(EntityInterface $entity) {
  * Implements hook_cron().
  */
 function signalwire_cron(){
-    $dateTime = new DateTime();
-    $dateTime->format('Y-m-d');
-    $dateTime->setTime(0,0,0);
+    /** @var  \Drupal\Core\Config\ConfigFactoryInterface $config */
+    $config = Drupal::service('config.factory');
+    $signalwire_config = $config->get('signalwire.config');
+    $gateway = $signalwire_config->get('client');
 
-    $signalwireManagerService = Drupal::service('signalwire_messaging.manager');
-    $messages = $signalwireManagerService->getMessagesByDate($dateTime->getTimestamp());
+    if ($gateway != 'none'){
+        /** @var QueueInterface $queue */
+        $queue = \Drupal::service('queue')->get('signalwire_message_queue');
+        $noItems = $queue->numberOfItems();
 
-    $queue = \Drupal::queue('signalwire_message_queue');
-    $queue->createQueue();
+        $now = new DrupalDateTime('now', DateTimeItemInterface::STORAGE_TIMEZONE);
+        $now->setTime(0, 0, 0);
 
-    foreach ($messages as $message){
+        $signalwireManagerService = Drupal::service('signalwire_messaging.manager');
+        $messages = $signalwireManagerService->getMessagesBySendDate($now->getTimestamp());
 
-        $data['message'] = $message->message;
-        $data['to'] = unserialize($message->recipients);
-        $data['node'] = $message->node;
-        $data['frequency'] = $message->frequency;
-        $data['next_send_date'] = $message->next_send_date;
-        $queue->createItem($data);
-       // print_r($data);
+        $queue = \Drupal::queue('signalwire_message_queue');
+        $queue->createQueue();
+
+        foreach ($messages as $message){
+
+            $data['node'] = $message->id();
+            $data['message'] = $message->field_signalwire_message->value;
+            $data['frequency'] = $message->field_message_frequency->value;
+            $data['field_stop_date'] = $message->field_stop_date->value;
+            $data['field_send_date'] = $message->field_send_date->value;
+
+            $field = $message->get('field_recipients');
+            $field_values = $field->getvalue();
+
+            $numbers = array();
+            foreach ($field_values as $field_value){
+                array_push($numbers, $field_value['value']);
+            }
+            $data['to'] = $numbers;
+            $queue->createItem($data);
+        }
     }
 }
