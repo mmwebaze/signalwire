@@ -8,7 +8,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Config\ConfigFactory;
 
 /**
- * Provides a form for displaying Number Groups.
+ * Provides a form for displaying Number Groups. Number Groups allow you to build collections of Phone Numbers to be
+ * used for things like outbound message pools, white/black-lists, and much more.
  */
 class NumberGroupsForm extends FormBase {
 
