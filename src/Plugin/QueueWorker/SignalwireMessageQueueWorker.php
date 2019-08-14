@@ -112,12 +112,11 @@ class SignalwireMessageQueueWorker extends QueueWorkerBase implements ContainerF
      */
     public function processItem($data) {
         $instance = $this->signalwirePluginManager->createInstance($this->gateWay);
-        $numbers = $data['to'];
-        $messageStatus = NULL;
+        //$numbers = $data['to'];
 
-        foreach ($numbers as $number){
-            $messageStatus = $instance->sendMessage($data['message'], $this->sender, $number, $this->senderType);
-        }
+        $messageStatus = $instance->sendMessage($data['message'], $this->sender, $data['to'], $this->senderType);
+
+        //$messageStatus = $instance->sendMessage($data['message'], $this->sender, $number, $this->senderType);
         if (!is_null($messageStatus)){
             $nextSendDate = SignalwireUtil::nextSendTimeStamp($data['field_send_date'], $data['frequency']);
             $this->signalwireMessage->setNextSend($data['node'], $nextSendDate, $data['field_stop_date']);

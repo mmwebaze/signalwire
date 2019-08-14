@@ -2,36 +2,19 @@
 
 namespace Drupal\signalwire\Service;
 
-
+/**
+ * Defines a Signalwire Message manager service.
+ */
 interface SignalwireMessageInterface {
 
     /**
-     * Saves a single scheduled message to the signalware_messages database table.
-     *
-     * @param array $message
-     *   The key value pair that define a single message record e.g
-     *   array(
-     *    'node' => 'node or message id',
-     *    'message' => 'The message body',
-     *    'recipients' => 'Serialized array of recipient numbers',
-     *    'frequency' => '0, 1, 2, or 3'
-     *    'created' => 'Unix timestamp message was created',
-     *    'date_next_send' => 'Unix timestamp message will next be sent',
-     *    'date_stop' => 'Unix timestamp message sending will stop'
-     *   )
-     * @return int
-     *   The status (0 or 1) of the insert process.
-     */
-    public function saveMessage(array $message);
-
-    /**
-     * Retrives a message from signalware_messages database table.
+     * Retrieves a message from signalware_messages database table.
      *
      * @param $messageId
      *   A unique id of the scheduled message usually a node id.
      *
-     * @return array
-     *   A single message record as defined in the saveMessage routine.
+     * @return \Drupal\Core\Entity\EntityInterface
+     *   A single message.
      */
     public function getMessage($messageId);
 
@@ -61,10 +44,10 @@ interface SignalwireMessageInterface {
      *   The send date unix timestamp.
      *
      * @param string $entityType
-     *   The entity type.
+     *   The entity type or machine name.
      *
-     * @return \Drupal\Core\Entity\EntityInterface[]
-     *   Array of entity objects.
+     * @return \Drupal\Core\Database\StatementInterface|null
+     *   Array of results of a query run against a database.
      */
     public function getMessagesBySendDate(int $sendDate, string $entityType);
 }

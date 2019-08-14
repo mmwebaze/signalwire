@@ -23,6 +23,14 @@ function signalwire_help($route_name, RouteMatchInterface $route_match) {
         default:
     }
 }
+
+/**
+ * Implements hook_form_FORM_ID_alter.
+ */
+function signalwire_form_node_signalwire_message_edit_form_alter(&$form, FormStateInterface $form_state, $form_id){
+    $form['#validate'][] = 'signalwire_form_node_signalwire_message_form_validate';
+}
+
 /**
  * Implements hook_form_FORM_ID_alter.
  */
@@ -91,34 +99,29 @@ function signalwire_cron(){
     if ($gateway != 'none'){
         /** @var QueueInterface $queue */
         $queue = \Drupal::service('queue')->get('signalwire_message_queue');
-        $noItems = $queue->numberOfItems();
+        $number_of_Items = $queue->numberOfItems();
 
-        $now = new DrupalDateTime('now', DateTimeItemInterface::STORAGE_TIMEZONE);
-        $now->setTime(0, 0, 0);
+        //don't add anything to the queue if not empty.
+        if ($number_of_Items == 0){
+            $now = new DrupalDateTime('now', DateTimeItemInterface::STORAGE_TIMEZONE);
+            $now->setTime(0, 0, 0);
 
-        $signalwireManagerService = Drupal::service('signalwire_messaging.manager');
-        $messages = $signalwireManagerService->getMessagesBySendDate($now->getTimestamp());
+            $signalwireManagerService = Drupal::service('signalwire_messaging.manager');
+            $messages = $signalwireManagerService->getMessagesBySendDate($now->getTimestamp());
 
-        $queue = \Drupal::queue('signalwire_message_queue');
-        $queue->createQueue();
+            $queue = \Drupal::queue('signalwire_message_queue');
+            $queue->createQueue();
 
-        foreach ($messages as $message){
-
-            $data['node'] = $message->id();
-            $data['message'] = $message->field_signalwire_message->value;
-            $data['frequency'] = $message->field_message_frequency->value;
-            $data['field_stop_date'] = $message->field_stop_date->value;
-            $data['field_send_date'] = $message->field_send_date->value;
-
-            $field = $message->get('field_recipients');
-            $field_values = $field->getvalue();
-
-            $numbers = array();
-            foreach ($field_values as $field_value){
-                array_push($numbers, $field_value['value']);
+            $data = array();
+            foreach ($messages as $message){
+                $data['node'] = $message->nid;
+                $data['message'] = $message->field_signalwire_message_value;
+                $data['frequency'] = $message->field_message_frequency_value;
+                $data['field_stop_date'] = $message->field_stop_date_value;
+                $data['field_send_date'] = $message->field_send_date_value;
+                $data['to'] = $message->field_recipients_value;
+                $queue->createItem($data);
             }
-            $data['to'] = $numbers;
-            $queue->createItem($data);
         }
     }
 }

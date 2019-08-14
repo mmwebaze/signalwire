@@ -3,10 +3,13 @@
 namespace Drupal\signalwire\Service;
 
 use Drupal\Core\Database\Driver\mysql\Connection;
+use Drupal\Core\Entity\EntityTypeManager;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Messenger\MessengerInterface;
-use Drupal\Core\Entity\EntityTypeManager;
 
+/**
+ * A signalwire message manager service.
+ */
 class SignalwireMessageManager implements SignalwireMessageInterface {
 
     /**
@@ -39,7 +42,7 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
      * SignalwireMessageManager constructor.
      *
      * @param Connection $connection
-     *   The connection service.
+     *   The database connection service.
      *
      * @param EntityTypeManager $entityTypeManager
      *   The entity type service.
@@ -50,44 +53,11 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
      * @param MessengerInterface $messenger
      *   A messenger service.
      */
-    public function __construct(Connection $connection, EntityTypeManager $entityTypeManager, LoggerChannelFactoryInterface $loggerChannelFactory, MessengerInterface $messenger) {
+    public function __construct(Connection $connection,EntityTypeManager $entityTypeManager, LoggerChannelFactoryInterface $loggerChannelFactory, MessengerInterface $messenger) {
         $this->connection = $connection;
         $this->entityTypeManager = $entityTypeManager;
         $this->loggerChannelFactory = $loggerChannelFactory->get('signalwire');
         $this->messenger = $messenger;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function saveMessage(array $values) {
-
-        try{
-            if (isset($values)) {
-                $value = array(
-                    'node' => $values['node'],
-                    'message' => $values['message'],
-                    //'from' => $values['from'],
-                    'recipients' => $values['recipients'],
-                    'frequency' => $values['frequency'],
-                    'created' => $values['created'],
-                    'next_send_date' => $values['next_send_date'],
-                    'stop_date' => $values['stop_date'],
-                );
-                $this->connection->insert('signalware_messages')->fields(['node', 'message', 'recipients',
-                    'frequency', 'created', 'next_send_date', 'stop_date'])
-                    ->values($value)->execute();
-
-                $this->messenger->addMessage("The text message associated with id ".$values['node']." has been saved.", MessengerInterface::TYPE_STATUS);
-                $this->loggerChannelFactory->notice('Message with id '.$values['node'].' has been added.');
-            }
-        }
-        catch (\Exception $e) {
-            //log for admin and debug purposes.
-            $this->loggerChannelFactory->notice($e->getMessage());
-            //Notify user something has gone seriously wrong with saving the message.
-            $this->messenger->addMessage('Saving message failed. ', MessengerInterface::TYPE_ERROR);
-        }
     }
 
     /**
@@ -101,15 +71,26 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
      * {@inheritdoc}
      */
     public function getMessagesBySendDate(int $sendDate, string $entityType = 'node') {
-       $storage = $this->entityTypeManager->getStorage($entityType);
-       $query = $storage->getQuery();
-       $query->condition('field_send_date', $sendDate);
-       $query->condition('field_stop_date', $sendDate, '<=');
-       $query->condition('field_send_status', 1);
-       $messageIds = $query->execute();
-       $messages = $storage->loadMultiple($messageIds);
 
-       return $messages;
+       $q = $this->connection->select('node', 'n');
+       $q->innerJoin('node__field_signalwire_message','sm', 'n.nid = sm.entity_id');
+       $q->innerJoin('node__field_send_date', 'sd','sd.entity_id = n.nid');
+       $q->innerJoin('node__field_stop_date', 'sp', 'sp.entity_id = n.nid');
+       $q->innerJoin('node__field_send_status', 'ss', 'ss.entity_id = n.nid');
+       $q->innerJoin('node__field_message_frequency', 'fm', 'fm.entity_id = n.nid');
+       $q->innerJoin('node__field_recipients', 'fr', 'fr.entity_id = n.nid');
+       $q->fields('n', ['nid']);
+       $q->fields('sd', ['field_send_date_value']);
+       $q->fields('sp', ['field_stop_date_value']);
+       $q->fields('sm', ['field_signalwire_message_value']);
+       $q->fields('fm', ['field_message_frequency_value']);
+       $q->fields('fr', ['field_recipients_value']);
+       $q->condition('n.type', 'signalwire_message');
+       $q->condition('sd.field_send_date_value', $sendDate);
+       $q->where( 'sd.field_send_date_value <= sp.field_stop_date_value');
+       $results = $q->execute();
+
+       return $results;
     }
 
     /**

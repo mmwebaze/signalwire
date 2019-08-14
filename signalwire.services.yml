@@ -4,4 +4,4 @@ services:
     parent: default_plugin_manager
   signalwire_messaging.manager:
     class: Drupal\signalwire\Service\SignalwireMessageManager
-    arguments: ['@database', '@entity_type.manager', '@logger.factory', '@messenger']
+    arguments: ['@database','@entity_type.manager', '@logger.factory', '@messenger']

@@ -10,10 +10,3 @@ signal.config_form:
   description: 'Signalwire configuration'
   parent: signalwire.admin_config
   weight: 90
-
-signal.number_groups:
-  title: 'Number Groups'
-  route_name: 'signalwire.number_groups'
-  description: 'Number Groups'
-  parent: signalwire.admin_config
-  weight: 100
