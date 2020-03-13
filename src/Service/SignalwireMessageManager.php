@@ -70,7 +70,7 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
     /**
      * {@inheritdoc}
      */
-    public function getMessagesBySendDate(int $sendDate, string $entityType = 'node') {
+    public function getMessagesBySendDate(int $sendDate, $entityType = 'node') {
 
        $q = $this->connection->select('node', 'n');
        $q->innerJoin('node__field_signalwire_message','sm', 'n.nid = sm.entity_id');
@@ -96,7 +96,7 @@ class SignalwireMessageManager implements SignalwireMessageInterface {
     /**
      * {@inheritdoc}
      */
-    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, int $frequency = 0){
+    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, $frequency = 0){
         $storage = $this->entityTypeManager->getStorage('node');
         $message = $storage->load($messageId);
         $message->field_send_date = $nextSendDate;

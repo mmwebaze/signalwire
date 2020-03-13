@@ -34,7 +34,7 @@ interface SignalwireServiceInterface extends PluginInspectionInterface {
      * @return MessageList
      *  The message list.
      */
-    public function sendMessage(string $message, string $fromNumber, string $recipientNumber, string $senderType = 'telephone');
+    public function sendMessage($message, $fromNumber, $recipientNumber, $senderType = 'telephone');
 
     /**
      * Gets a list of Number Groups .
@@ -53,7 +53,7 @@ interface SignalwireServiceInterface extends PluginInspectionInterface {
      * @return array
      *   Returns a list of Number Group's Memberships.
      */
-    public function numberGroupMemberships(string $numberGroupId);
+    public function numberGroupMemberships($numberGroupId);
 
     /**
      * Gets a list of SIP Endpoints.

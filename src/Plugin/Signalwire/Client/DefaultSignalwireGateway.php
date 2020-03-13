@@ -3,6 +3,10 @@
 namespace Drupal\signalwire\Plugin\Signalwire\Client;
 
 use Drupal\Core\Config\ConfigFactory;
+use Drupal\encrypt\EncryptionProfileManagerInterface;
+use Drupal\encrypt\EncryptServiceInterface;
+use Drupal\encrypt\Exception\EncryptException;
+use Drupal\encrypt\Exception\EncryptionMethodCanNotDecryptException;
 use Drupal\signalwire\Plugin\Signalwire\SignalwirePluginBase;
 use SignalWire\Rest\Client;
 use Twilio\Exceptions\TwilioException;
@@ -46,20 +50,34 @@ class DefaultSignalwireGateway extends SignalwirePluginBase {
      */
     private $apiKey;
 
-    public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactory $configFactory, HttpClient $httpClient)
+    public function __construct(array $configuration, $plugin_id, $plugin_definition, ConfigFactory $configFactory, HttpClient $httpClient, EncryptionProfileManagerInterface $encryption_profile_manager, EncryptServiceInterface $encrypt_service)
     {
-        parent::__construct($configuration, $plugin_id, $plugin_definition, $configFactory, $httpClient);
+        parent::__construct($configuration, $plugin_id, $plugin_definition, $configFactory, $httpClient, $encryption_profile_manager, $encrypt_service);
 
         $signalwireConfigs = $configFactory->get('signalwire.config');
-        $this->spaceUrl = $signalwireConfigs->get('space_url');
-        $this->projectKey = $signalwireConfigs->get('project_key');
-        $this->apiKey = $signalwireConfigs->get('api_key');
+        $profile = $encryption_profile_manager->getEncryptionProfile($signalwireConfigs->get('encryption'));
 
         try{
+            if (is_null($profile)){
+              //todo need to log this error
+              return;
+            }
+          $this->spaceUrl = $this->encryptService->decrypt($signalwireConfigs->get('space_url'), $profile);
+          $this->projectKey = $this->encryptService->decrypt($signalwireConfigs->get('project_key'), $profile);
+          $this->apiKey = $this->encryptService->decrypt($signalwireConfigs->get('api_key'), $profile);
+
             $this->client = new Client($this->projectKey, $this->apiKey, array(
                     "signalwireSpaceUrl" => $this->spaceUrl,
                 )
             );
+        }
+        catch(EncryptException $e){
+          //todo need to log this exception
+          //$this->loggerFactory->get('zoom_meeting')->error("{$e->getMessage()}");
+        }
+        catch(EncryptionMethodCanNotDecryptException $e){
+          //todo need to log this exception
+          //$this->loggerFactory->get('zoom_meeting')->error("{$e->getMessage()}");
         }
         catch(TwilioException $exception){
             \Drupal::logger('signalwire')->notice($exception->getMessage());
@@ -79,7 +97,7 @@ class DefaultSignalwireGateway extends SignalwirePluginBase {
     /**
      * {@inheritdoc}
      */
-    public function sendMessage(string $message, string $fromNumber, string $recipientNumber, string $senderType = 'telephone') {
+    public function sendMessage($message, $fromNumber, $recipientNumber, $senderType = 'telephone') {
         try{
             $messages = $this->client->messages;
             if ($senderType == 'number_group'){
@@ -132,7 +150,7 @@ class DefaultSignalwireGateway extends SignalwirePluginBase {
     /**
      * {@inheritdoc}
      */
-    public function numberGroupMemberships(string $numberGroupId){
+    public function numberGroupMemberships($numberGroupId){
         $endpoint = 'https://'.$this->spaceUrl.'/api/relay/rest/number_groups/'.$numberGroupId.'/number_group_memberships';
 
         try{

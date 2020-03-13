@@ -81,7 +81,7 @@ function signalwire_node_presave(EntityInterface $entity){
         $field_stop_date->setTime(0,0,0);
         $entity->field_stop_date = $field_stop_date->getTimestamp();
 
-        if ($entity->field_message_frequency == 0 && $entity->field_send_date != $entity->field_stop_date){
+        if ($entity->field_message_frequency->value == 0 && $entity->field_send_date != $entity->field_stop_date){
             $entity->field_stop_date = $entity->field_send_date;
         }
     }

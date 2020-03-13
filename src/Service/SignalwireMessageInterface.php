@@ -29,13 +29,14 @@ interface SignalwireMessageInterface {
      *
      * @param int $stopDate
      *   The stop date unix timestamp.
+     *
      * @param int $frequency
      *   The frequency the message is sent out. 0 - once, 1 - daily, 2 - weekly and 3 - monthly. Defaults to once.
      *
      * @return int
      *   The status (0 or 1).
      */
-    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, int $frequency = 0);
+    public function setNextSend(int $messageId, int $nextSendDate, int $stopDate, $frequency = 0);
 
     /**
      * Gets messages by sending date.
@@ -49,5 +50,5 @@ interface SignalwireMessageInterface {
      * @return \Drupal\Core\Database\StatementInterface|null
      *   Array of results of a query run against a database.
      */
-    public function getMessagesBySendDate(int $sendDate, string $entityType);
+    public function getMessagesBySendDate(int $sendDate, $entityType = 'node');
 }
