@@ -6,8 +6,7 @@
   "license": "GPL-2.0-or-later",
   "require": {
     "drupal/core": "~8",
-    "signalwire/signalwire": "^1.4",
-    "mukto90/ncrypt" : "^1.0"
+    "signalwire/signalwire": "^1.4"
   },
   "authors": [{
     "name": "Michael Mwebaze",
